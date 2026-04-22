@@ -1,0 +1,6 @@
+{
+  "name": "SparkChat Nexus",
+  "description": "An elite, real-time ecosystem featuring secure messaging, identity governance, and high-fidelity video streams.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": []
+}

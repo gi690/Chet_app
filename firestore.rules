@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'gs931461@gmail.com'
+      );
+    }
+
+    // User Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.uid == request.auth.uid;
+    }
+
+    // Message Validation
+    function isValidMessage(data) {
+      return data.keys().hasAll(['text', 'senderId', 'createdAt', 'roomId']) &&
+             data.text is string && data.text.size() <= 1000 &&
+             data.senderId == request.auth.uid &&
+             data.createdAt == request.time &&
+             data.roomId is string;
+    }
+
+    // Room Validation
+    function isValidRoom(data) {
+      return data.keys().hasAll(['name', 'createdBy', 'createdAt']) &&
+             data.name is string && data.name.size() <= 64 &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // Call Validation
+    function isValidCall(data) {
+       return data.callerId == request.auth.uid || data.receiverId == request.auth.uid;
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Allow searching for friends
+      allow create: if isSignedIn() && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'lastSeen']);
+    }
+
+    // 2. Global Messages (Virtual Global Room)
+    match /messages/{messageId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 3. Rooms Collection
+    match /rooms/{roomId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(roomId) && isValidRoom(incoming());
+      allow update: if isSignedIn() && (existing().createdBy == request.auth.uid || isAdmin());
+      allow delete: if isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid);
+
+      match /messages/{messageId} {
+        allow list: if isSignedIn();
+        allow get: if isSignedIn();
+        allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
+        allow delete: if isAdmin();
+      }
+    }
+
+    // 4. Calls Collection (WebRTC Signaling)
+    match /calls/{callId} {
+      allow create: if isSignedIn() && isValidCall(incoming());
+      allow update: if isSignedIn() && isValidCall(incoming());
+      allow get, list, delete: if isSignedIn() && isValidCall(existing());
+      
+      match /offerCandidates/{candidateId} {
+        allow read, write: if isSignedIn();
+      }
+      match /answerCandidates/{candidateId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // 5. Admin Collection
+    match /admins/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+    // 6. Access Keys
+    match /access_keys/{keyId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow update: if isSignedIn() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['usedBy'])
+      );
+      allow create, delete: if isAdmin();
+    }
+  }
+}
