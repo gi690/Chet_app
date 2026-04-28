@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { PhoneOff, Video, VideoOff, Mic, MicOff, Maximize, Minimize } from 'lucide-react';
+import { PhoneOff, Video, VideoOff, Mic, MicOff, Maximize, Minimize, Monitor, MonitorOff } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { 
   collection, 
@@ -42,12 +42,69 @@ export const VideoCall: React.FC<VideoCallProps> = ({
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [callStatus, setCallStatus] = useState<'connecting' | 'active' | 'ended'>('connecting');
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pc = useRef<RTCPeerConnection>(new RTCPeerConnection(servers));
   const callIdRef = useRef<string | null>(initialCallId || null);
+
+  const toggleScreenShare = async () => {
+    if (!pc.current || !localStream) return;
+
+    try {
+      if (!isScreenSharing) {
+        // Start screen share
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        // Replace the video track in the peer connection
+        const sender = pc.current.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) {
+          sender.replaceTrack(screenTrack);
+        }
+
+        // Update local video
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = screenStream;
+        }
+
+        // Handle native "stop sharing" button
+        screenTrack.onended = () => {
+          stopScreenShare(screenTrack);
+        };
+
+        setIsScreenSharing(true);
+      } else {
+        // Stop screen share will be handled by our helper
+        const videoTrack = localStream.getVideoTracks()[0];
+        const screenTrack = (localVideoRef.current?.srcObject as MediaStream)?.getVideoTracks()[0];
+        if (screenTrack) {
+          stopScreenShare(screenTrack);
+        }
+      }
+    } catch (err) {
+      console.error("Screen share error:", err);
+    }
+  };
+
+  const stopScreenShare = (screenTrack: MediaStreamTrack) => {
+    screenTrack.stop();
+    
+    // Switch back to camera track
+    const videoTrack = localStream?.getVideoTracks()[0];
+    if (videoTrack && pc.current) {
+      const sender = pc.current.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(videoTrack);
+      }
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+      }
+    }
+    setIsScreenSharing(false);
+  };
 
   useEffect(() => {
     const startCall = async () => {
@@ -248,9 +305,17 @@ export const VideoCall: React.FC<VideoCallProps> = ({
 
           <button 
             onClick={toggleVideo}
-            className={`p-4 rounded-full transition-all ${isVideoOff ? 'bg-gray-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            className={`p-4 rounded-full transition-all ${isVideoOff ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
           >
             {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+          </button>
+          
+          <button 
+            onClick={toggleScreenShare}
+            className={`p-4 rounded-full transition-all ${isScreenSharing ? 'bg-blue-500 text-white animate-pulse' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            title={isScreenSharing ? "Stop Sharing" : "Share Screen"}
+          >
+            {isScreenSharing ? <MonitorOff size={24} /> : <Monitor size={24} />}
           </button>
         </div>
       </div>

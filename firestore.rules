@@ -125,5 +125,14 @@ service cloud.firestore {
       );
       allow create, delete: if isAdmin();
     }
+
+    // 7. AI Tasks (Multimodal GenAI Extension)
+    match /ai_tasks/{taskId} {
+      allow create: if isSignedIn() && isValidId(taskId) && 
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
+      allow get, list, update: if isSignedIn() && existing().createdBy == request.auth.uid;
+      allow delete: if isSignedIn() && existing().createdBy == request.auth.uid;
+    }
   }
 }

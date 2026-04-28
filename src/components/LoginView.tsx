@@ -28,7 +28,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginStart, onLoginError
     onLoginStart();
     try {
       await loginWithGoogle();
-    } catch (err) {
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, common action, not a real error
+        return;
+      }
       onLoginError(err);
     }
   };

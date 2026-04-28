@@ -51,6 +51,19 @@
         "answer": { "type": "object" },
         "status": { "type": "string", "enum": ["incoming", "active", "ended"] }
       }
+    },
+    "AiTask": {
+      "title": "AI Task",
+      "description": "Task for Google Gemini multimodal extension",
+      "type": "object",
+      "properties": {
+        "prompt": { "type": "string" },
+        "response": { "type": "string" },
+        "status": { "type": "object" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["prompt", "createdBy", "createdAt"]
     }
   },
   "firestore": {
@@ -73,6 +86,10 @@
     "admins/{userId}": {
       "schema": { "type": "object", "properties": { "role": { "enum": ["admin"] } } },
       "description": "Administrator list"
+    },
+    "ai_tasks/{taskId}": {
+      "schema": "AiTask",
+      "description": "Multimodal AI generation tasks"
     }
   }
 }

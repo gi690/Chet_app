@@ -27,6 +27,7 @@ import {
 import { UserSearch } from './UserSearch';
 import { RoomCreate } from './RoomCreate';
 import { VideoCall } from './VideoCall';
+import { AiAdvisor } from './AiAdvisor';
 
 interface ChatRoomProps {
   onOpenAdmin: () => void;
@@ -43,6 +44,8 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
   // Modals
   const [showSearch, setShowSearch] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [showAiAdvisor, setShowAiAdvisor] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [activeCall, setActiveCall] = useState<{ userId: string; userName: string; isIncoming: boolean; callId?: string } | null>(null);
   const [incomingCall, setIncomingCall] = useState<{ callId: string; callerId: string; callerName: string } | null>(null);
 
@@ -157,17 +160,35 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
 
   return (
     <div className="h-screen flex bg-slate-50 text-slate-900 font-sans p-0 md:p-4 overflow-hidden" id="chat-root">
+      {/* Sidebar Mobile Overlay */}
+      <AnimatePresence>
+        {showSidebar && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSidebar(false)}
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[60] md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 h-full bg-white border border-slate-200 rounded-3xl shadow-sm mr-4" id="chat-sidebar">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-10 overflow-hidden">
-            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-200">
-               <Sparkles size={20} />
+      <aside className={`${showSidebar ? 'fixed inset-y-4 left-4 right-4 z-[70] flex' : 'hidden'} md:static md:flex flex-col w-72 h-full bg-white border border-slate-200 rounded-3xl shadow-sm mr-0 md:mr-4 transition-all`} id="chat-sidebar">
+        <div className="p-6 flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-200">
+                 <Sparkles size={20} />
+              </div>
+              <div className="flex-1">
+                 <h1 className="font-extrabold text-lg tracking-tight text-slate-800 leading-none">SparkChat</h1>
+                 <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-1">Enterprise v2.0</p>
+              </div>
             </div>
-            <div className="flex-1">
-               <h1 className="font-extrabold text-lg tracking-tight text-slate-800 leading-none">SparkChat</h1>
-               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-1">Enterprise v2.0</p>
-            </div>
+            <button onClick={() => setShowSidebar(false)} className="md:hidden p-2 text-slate-400 hover:bg-slate-50 rounded-xl">
+               <X size={20} />
+            </button>
           </div>
 
           <div className="flex items-center justify-between mb-4 px-2">
@@ -180,12 +201,12 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
             </button>
           </div>
 
-          <nav className="space-y-1 mb-8">
+          <nav className="space-y-1 mb-8 overflow-y-auto flex-1">
             {rooms.map(room => (
               <motion.div 
                 whileHover={{ x: 2 }}
                 key={room.id}
-                onClick={() => setActiveRoomId(room.id)}
+                onClick={() => { setActiveRoomId(room.id); setShowSidebar(false); }}
                 className={`group px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-3 transition-all relative ${
                   activeRoomId === room.id ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
@@ -202,6 +223,12 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
           <div className="px-2">
              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 block">Settings</span>
              <div className="space-y-1">
+                <div 
+                  onClick={() => setShowAiAdvisor(true)}
+                  className="px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-3 text-brand-600 bg-brand-50/30 hover:bg-brand-50 transition-all font-bold text-[13px] border border-brand-100/50 mb-2"
+                >
+                   <Sparkles size={16} className="text-brand-500" /> Nexus Advisor
+                </div>
                 {isAdmin && (
                   <div 
                     onClick={onOpenAdmin}
@@ -238,11 +265,19 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
       {/* Main Area */}
       <main className="flex-1 flex flex-col h-full glass-panel rounded-3xl overflow-hidden relative" id="chat-main">
         {/* Modern Header */}
-        <header className="px-8 py-5 border-b border-slate-100 flex items-center justify-between z-20" id="chat-header">
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-300 font-light text-xl">/</span>
-            <h2 className="text-lg font-bold text-slate-800 tracking-tight">{activeRoom?.name}</h2>
-            <div className="w-1.5 h-1.5 bg-brand-500 rounded-full ml-1"></div>
+        <header className="px-6 md:px-8 py-5 border-b border-slate-100 flex items-center justify-between z-20" id="chat-header">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowSidebar(true)}
+              className="md:hidden p-2 -ml-2 text-slate-400 hover:text-brand-600 transition-colors"
+            >
+              <LayoutGrid size={20} />
+            </button>
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <span className="text-slate-300 font-light text-xl">/</span>
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight truncate">{activeRoom?.name}</h2>
+              <div className="w-1.5 h-1.5 bg-brand-500 rounded-full ml-1 shrink-0"></div>
+            </div>
           </div>
 
           <div className="flex items-center bg-slate-100 p-1 rounded-2xl gap-1">
@@ -252,6 +287,20 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
                title="Sign Out"
              >
                <LogOut size={18} />
+             </button>
+             <button 
+               onClick={() => setShowAiAdvisor(true)}
+               className="md:hidden p-2 text-brand-600 hover:bg-white rounded-xl transition-all"
+               title="AI Advisor"
+             >
+               <Sparkles size={18} />
+             </button>
+             <button 
+               onClick={() => setShowCreateRoom(true)}
+               className="md:hidden p-2 text-brand-600 hover:bg-white rounded-xl transition-all"
+               title="New Workspace"
+             >
+               <Plus size={18} />
              </button>
              {(isAdmin || activeRoom?.createdBy === user?.uid) && activeRoomId !== 'global' && (
                <button 
@@ -343,9 +392,13 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
             className="flex items-center gap-2 bg-white p-3 rounded-3xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)] focus-within:border-brand-500 transition-all max-w-4xl mx-auto" 
             id="send-form"
           >
-            <div className="p-3 text-slate-300 hover:text-brand-500 transition-colors cursor-pointer hidden sm:block">
+            <button 
+              type="button"
+              onClick={() => setShowCreateRoom(true)}
+              className="p-3 text-slate-300 hover:text-brand-500 transition-colors cursor-pointer hidden sm:block"
+            >
                <Plus size={22} />
-            </div>
+            </button>
             <input
               type="text"
               value={newMessage}
@@ -394,6 +447,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
       <AnimatePresence>
         {showSearch && <UserSearch onClose={() => setShowSearch(false)} onStartChat={(u) => { setActiveRoomId('global'); setShowSearch(false); }} onVideoCall={startVideoCall} />}
         {showCreateRoom && <RoomCreate onCreated={(id) => { setActiveRoomId(id); setShowCreateRoom(false); }} onClose={() => setShowCreateRoom(false)} />}
+        {showAiAdvisor && <AiAdvisor onClose={() => setShowAiAdvisor(false)} />}
         {activeCall && <VideoCall remoteUserId={activeCall.userId} remoteUserName={activeCall.userName} isIncoming={activeCall.isIncoming} callId={activeCall.callId} onEnd={() => setActiveCall(null)} />}
       </AnimatePresence>
     </div>
