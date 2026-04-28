@@ -186,7 +186,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginStart, onLoginError
         >
           <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
             <Sparkles className="text-blue-400" size={18} />
-            <span className="font-bold tracking-tight text-sm uppercase">SparkChat Enterprise</span>
+            <span className="font-bold tracking-tight text-sm uppercase">ChatHub</span>
           </div>
 
           <button 

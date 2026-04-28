@@ -182,7 +182,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ onOpenAdmin }) => {
                  <Sparkles size={20} />
               </div>
               <div className="flex-1">
-                 <h1 className="font-extrabold text-lg tracking-tight text-slate-800 leading-none">SparkChat</h1>
+                 <h1 className="font-extrabold text-lg tracking-tight text-slate-800 leading-none">ChatHub</h1>
                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-1">Enterprise v2.0</p>
               </div>
             </div>
