@@ -46,6 +46,7 @@ service cloud.firestore {
     function isValidMessage(data) {
       return data.keys().hasAll(['text', 'senderId', 'createdAt', 'roomId']) &&
              data.text is string && data.text.size() <= 1000 &&
+             (!('imageUrl' in data) || data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 500000)) &&
              data.senderId == request.auth.uid &&
              data.createdAt == request.time &&
              data.roomId is string;
@@ -70,7 +71,11 @@ service cloud.firestore {
       allow list: if isSignedIn(); // Allow searching for friends
       allow create: if isSignedIn() && isValidId(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && isValidUser(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'lastSeen']);
+                    incoming().diff(existing()).affectedKeys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'lastSeen']);
+      
+      match /friends/{friendId} {
+        allow read, write: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == friendId);
+      }
     }
 
     // 2. Global Messages (Virtual Global Room)
@@ -78,7 +83,7 @@ service cloud.firestore {
       allow list: if isSignedIn();
       allow get: if isSignedIn();
       allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && existing().senderId == request.auth.uid);
     }
 
     // 3. Rooms Collection
@@ -93,7 +98,7 @@ service cloud.firestore {
         allow list: if isSignedIn();
         allow get: if isSignedIn();
         allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
-        allow delete: if isAdmin();
+        allow delete: if isAdmin() || (isSignedIn() && existing().senderId == request.auth.uid);
       }
     }
 

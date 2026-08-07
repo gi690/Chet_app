@@ -19,6 +19,7 @@
       "type": "object",
       "properties": {
         "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
         "senderId": { "type": "string" },
         "senderName": { "type": "string" },
         "senderPhoto": { "type": "string" },
